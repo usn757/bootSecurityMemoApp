@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>메모 앱</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0a;
+      --bg-card: #1a1a1a;
+      --bg-input: #242424;
+      --accent-primary: #7000ff;
+      --accent-secondary: #4e11af;
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0b0;
+      --text-muted: #777777;
+      --success: #00c853;
+      --danger: #ff3d00;
+      --warning: #ffab00;
+      --border-radius: 12px;
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 24px 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .app-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent-primary), #a060ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .main-container {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 30px 20px;
+      flex-grow: 1;
+    }
+
+    .status-area {
+      margin-bottom: 30px;
+    }
+
+    .flash-message {
+      padding: 16px;
+      border-radius: var(--border-radius);
+      margin-bottom: 20px;
+      font-weight: 500;
+      animation: slideDown 0.4s ease-out forwards;
+      display: flex;
+      align-items: center;
+    }
+
+    .flash-message.success {
+      background-color: rgba(0, 200, 83, 0.15);
+      border-left: 4px solid var(--success);
+    }
+
+    .flash-message.error {
+      background-color: rgba(255, 61, 0, 0.15);
+      border-left: 4px solid var(--danger);
+    }
+
+    .flash-message:before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      display: inline-block;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    .flash-message.success:before {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300c853' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+    }
+
+    .flash-message.error:before {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff3d00' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/%3E%3C/svg%3E");
+    }
+
+    .control-panel {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .memo-panel {
+      background-color: var(--bg-card);
+      border-radius: var(--border-radius);
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-title {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      color: var(--accent-primary);
+      display: flex;
+      align-items: center;
+    }
+
+    .panel-title:before {
+      content: '';
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin-right: 10px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237000ff' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    .add-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-group {
+      flex-grow: 1;
+      position: relative;
+    }
+
+    .error-text {
+      color: var(--danger);
+      font-size: 0.85rem;
+      position: absolute;
+      bottom: -20px;
+      left: 5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background-color: var(--bg-input);
+      border: 2px solid transparent;
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      padding: 14px 16px;
+      font-size: 1rem;
+      transition: var(--transition);
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 2px rgba(112, 0, 255, 0.2);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    button {
+      background-color: transparent;
+      border: none;
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 12px 20px;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+    }
+
+    .btn-primary {
+      background-color: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(112, 0, 255, 0.3);
+    }
+
+    .btn-danger {
+      background-color: rgba(255, 61, 0, 0.1);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      min-width: unset;
+      padding: 0;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-icon:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .btn-edit {
+      background-color: rgba(255, 171, 0, 0.1);
+      color: var(--warning);
+      border: 1px solid var(--warning);
+      min-width: 70px;
+      padding: 8px 12px;
+    }
+
+    .btn-edit:hover {
+      background-color: var(--warning);
+      color: black;
+    }
+
+    .btn-delete {
+      background-color: rgba(255, 61, 0, 0.1);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      min-width: 70px;
+      padding: 8px 12px;
+    }
+
+    .btn-delete:hover {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-save {
+      background-color: rgba(0, 200, 83, 0.1);
+      color: var(--success);
+      border: 1px solid var(--success);
+      min-width: 70px;
+      padding: 8px 12px;
+    }
+
+    .btn-save:hover {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .btn-cancel {
+      background-color: rgba(176, 176, 176, 0.1);
+      color: var(--text-secondary);
+      border: 1px solid var(--text-secondary);
+      min-width: 70px;
+      padding: 8px 12px;
+    }
+
+    .btn-cancel:hover {
+      background-color: var(--text-secondary);
+      color: black;
+    }
+
+    .memo-list-container {
+      margin-top: 20px;
+    }
+
+    .memo-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .memo-card {
+      background-color: var(--bg-card);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: var(--transition);
+      position: relative;
+      border-top: 3px solid var(--accent-primary);
+    }
+
+    .memo-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .memo-content {
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    .memo-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 20px;
+    }
+
+    .memo-id {
+      background-color: rgba(112, 0, 255, 0.1);
+      color: var(--accent-primary);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .memo-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .edit-form {
+      display: none;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .edit-form-content {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-illustration {
+      max-width: 200px;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    .empty-text {
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      padding: 20px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .add-form {
+        flex-direction: column;
+      }
+
+      .memo-list {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .edit-form-content {
+        flex-direction: column;
+      }
+    }
+
+    .icon-plus {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+
+    .icon-trash {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff3d00' width='24px' height='24px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-content">
+    <h1 class="app-title">모던 메모</h1>
+  </div>
+</header>
+
+<main class="main-container">
+  <div class="status-area">
+    <div th:if="${msg}"
+         th:text="${msg}"
+         th:classappend="${msg.contains('실패') or msg.contains('오류') or msg.contains('없습니다')} ? 'flash-message error' : 'flash-message success'">
+      알림 메시지
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <form th:method="post" th:action="@{/delete-all}" onsubmit="return confirm('정말로 모든 메모를 삭제하시겠습니까?');">
+      <button type="submit" class="btn-danger">
+        <span class="icon-trash"></span>전체 삭제
+      </button>
+    </form>
+  </div>
+
+  <section class="memo-panel">
+    <h2 class="panel-title">새 메모 작성</h2>
+    <form th:action="@{/add}" th:method="post" th:object="${memoForm}" class="add-form">
+      <div class="input-group">
+        <input type="text" id="add-text" th:field="*{text}" placeholder="메모 내용을 입력하세요..." required>
+        <span class="error-text" th:if="${#fields.hasErrors('text')}" th:errors="*{text}">입력 오류</span>
+      </div>
+      <button type="submit" class="btn-primary">
+        <span class="icon-plus"></span>등록하기
+      </button>
+    </form>
+  </section>
+
+  <section class="memo-list-container">
+    <h2 class="panel-title">메모 목록</h2>
+
+    <div class="memo-list" th:if="${!memoList.isEmpty()}">
+      <div th:each="memo : ${memoList}" th:id="|memo-${memo.id()}|" class="memo-card">
+        <div th:id="|display-${memo.id()}|" class="memo-display">
+          <div class="memo-content" th:text="${memo.text()}">메모 내용</div>
+          <div class="memo-meta">
+            <span class="memo-id" th:text="|#${memo.id()}|">ID</span>
+            <span class="memo-date" th:text="${memo.createdAt()}">작성일</span>
+          </div>
+          <div class="memo-actions">
+            <button type="button" th:attr="data-memo-id=${memo.id()}, data-memo-text=${memo.text()}"
+                    onclick="initiateEdit(this)" class="btn-edit">수정</button>
+            <form style="display:inline" th:method="post" th:action="@{/delete/{id}(id=${memo.id()})}"
+                  onsubmit="return confirm('이 메모를 삭제하시겠습니까?');">
+              <button type="submit" class="btn-delete">삭제</button>
+            </form>
+          </div>
+        </div>
+
+        <div th:id="|edit-${memo.id()}|" class="edit-form">
+          <form th:action="@{/update/{id}(id=${memo.id()})}" th:method="post">
+            <div class="edit-form-content">
+              <div class="input-group">
+                <input type="text" th:name="text" th:id="|edit-input-${memo.id()}|" required>
+              </div>
+              <button type="submit" class="btn-save">저장</button>
+              <button type="button" th:onclick="|hideEditForm(${memo.id()})|" class="btn-cancel">취소</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" th:if="${memoList.isEmpty()}">
+      <svg class="empty-illustration" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.5 3.5L18 2L16.5 3.5L15 2L13.5 3.5L12 2L10.5 3.5L9 2L7.5 3.5L6 2L4.5 3.5L3 2V22L4.5 20.5L6 22L7.5 20.5L9 22L10.5 20.5L12 22L13.5 20.5L15 22L16.5 20.5L18 22L19.5 20.5L21 22V2L19.5 3.5Z" stroke="#7000ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M7 7H17" stroke="#7000ff" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M7 12H17" stroke="#7000ff" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M7 17H12" stroke="#7000ff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p class="empty-text">표시할 메모가 없습니다</p>
+      <p>위의 '새 메모 작성' 섹션에서 첫 메모를 작성해보세요!</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>© 2025 모던 메모 애플리케이션</p>
+</footer>
+
+<script th:inline="javascript">
+  /*<![CDATA[*/
+
+  function initiateEdit(buttonElement) {
+    const id = buttonElement.getAttribute('data-memo-id');
+    const currentText = buttonElement.getAttribute('data-memo-text');
+    showEditForm(id, currentText);
+  }
+
+  function showEditForm(id, currentText) {
+    // 다른 열린 편집폼 닫기
+    document.querySelectorAll('.edit-form').forEach(form => {
+      if (form.style.display === 'block' && form.id !== 'edit-' + id) {
+        const otherId = form.id.split('-')[1];
+        hideEditForm(otherId);
+      }
+    });
+
+    // 디스플레이 숨기기
+    const displayDiv = document.getElementById('display-' + id);
+    if (displayDiv) displayDiv.style.display = 'none';
+
+    // 편집폼 표시
+    const editDiv = document.getElementById('edit-' + id);
+    if (editDiv) {
+      editDiv.style.display = 'block';
+      const inputField = document.getElementById('edit-input-' + id);
+      if (inputField) {
+        inputField.value = currentText;
+        inputField.focus();
+        inputField.select();
+      }
+    }
+  }
+
+  function hideEditForm(id) {
+    const editDiv = document.getElementById('edit-' + id);
+    if (editDiv) editDiv.style.display = 'none';
+
+    const displayDiv = document.getElementById('display-' + id);
+    if (displayDiv) displayDiv.style.display = 'block';
+  }
+
+  // 플래시 메시지 자동 제거
+  const flashMessage = document.querySelector('.flash-message');
+  if (flashMessage) {
+    setTimeout(() => {
+      flashMessage.style.opacity = '0';
+      flashMessage.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        flashMessage.remove();
+      }, 300);
+    }, 5000);
+  }
+
+  /*]]>*/
+</script>
+</body>
+</html>

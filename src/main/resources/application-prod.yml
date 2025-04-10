@@ -1,0 +1,17 @@
+# application-prod.yml
+spring:
+#  application:
+#    name: BootSecurity
+
+  datasource:
+  # PostgreSQL Database Configuration
+    url: ${POSTGRES_URL} # 실제 DB URL로 변경
+    username: ${POSTGRES_USER} # 실제 DB 사용자명으로 변경
+    password: ${POSTGRES_PASSWORD} # 실제 DB 비밀번호로 변경
+    driver-class-name: org.postgresql.Driver
+
+  # 시큐리티
+  security:
+    user:
+      name: ${SECURITY_NAME}
+      password: ${SECURITY_PASSWORD}

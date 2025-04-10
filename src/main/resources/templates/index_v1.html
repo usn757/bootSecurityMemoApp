@@ -1,0 +1,151 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>메모</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1, h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        nav, .add-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #eee;}
+        .flash-message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .flash-message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash-message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .error-text { color: red; font-size: 0.9em; margin-left: 5px;}
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 15px; padding: 15px; border: 1px solid #eee; border-radius: 4px; background-color: #f9f9f9; }
+        .memo-content { margin-bottom: 8px; font-size: 1.1em; }
+        .memo-details { font-size: 0.8em; color: #666; margin-bottom: 10px; }
+        .action-buttons button, .action-buttons form { display: inline-block; margin-right: 5px; }
+        .edit-form { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
+        input[type="text"] { padding: 8px; border: 1px solid #ccc; border-radius: 3px; margin-right: 5px; min-width: 300px; }
+        button { padding: 6px 12px; border: 1px solid #ccc; border-radius: 3px; background-color: #e7e7e7; cursor: pointer; }
+        button:hover { background-color: #ddd; }
+        button[type="submit"] { background-color: #5cb85c; color: white; border-color: #4cae4c; }
+        button[type="submit"]:hover { background-color: #449d44; }
+        .delete-button { background-color: #d9534f; color: white; border-color: #d43f3a; }
+        .delete-button:hover { background-color: #c9302c; }
+        .cancel-button { background-color: #f0ad4e; color: white; border-color: #eea236;}
+        .cancel-button:hover { background-color: #ec971f;}
+    </style>
+</head>
+<body>
+
+<h1>메모장</h1>
+
+<div th:if="${msg}"
+     th:text="${msg}"
+     th:classappend="${msg.contains('실패') or msg.contains('오류') or msg.contains('없습니다')} ? 'flash-message error' : 'flash-message success'">
+    Flash message goes here
+</div>
+
+
+<nav>
+    <form style='display:inline' th:method="post" th:action="@{/delete-all}" onsubmit="return confirm('정말로 모든 메모를 삭제하시겠습니까?');">
+        <button type="submit" class="delete-button">전체 삭제</button>
+    </form>
+</nav>
+
+<section class="add-section">
+    <h2>새 메모 추가</h2>
+    <form th:action="@{/add}" th:method="post" th:object="${memoForm}">
+        <label for="add-text">내용:</label>
+        <input type="text" id="add-text" th:field="*{text}" placeholder="메모 내용을 입력하세요..." size="50" required>
+        <button type="submit">등록</button>
+        <span class="error-text" th:if="${#fields.hasErrors('text')}" th:errors="*{text}">Text Error</span>
+    </form>
+</section>
+
+<h2>메모 목록</h2>
+
+<ul th:if="${!memoList.isEmpty()}">
+    <li th:each="memo : ${memoList}" th:id="|memo-${memo.id()}|" class="memo-item">
+        <div th:id="|display-${memo.id()}|" class="memo-display">
+            <div class="memo-content">
+                <span th:text="${memo.text()}">Memo text goes here...</span>
+            </div>
+            <div class="memo-details">
+                ID: <span th:text="${memo.id()}"></span> |
+                작성일: <span th:text="${memo.createdAt()}"></span>
+            </div>
+            <div class="action-buttons">
+<!--                <button th:onclick="|showEditForm(${memo.id()}, '${#strings.escapeJavaScript(memo.text())}')|">수정</button>-->
+                <button type="button" th:attr="data-memo-id=${memo.id()}, data-memo-text=${memo.text()}" onclick="initiateEdit(this)">수정</button>
+                <form style='display:inline' th:method="post" th:action="@{/delete/{id}(id=${memo.id()})}" onsubmit="return confirm('메모 #' + [[${memo.id()}]] + '(을)를 삭제하시겠습니까?');">
+                    <button type="submit" class="delete-button">삭제</button>
+                </form>
+            </div>
+        </div>
+
+        <div th:id="|edit-${memo.id()}|" class="edit-form">
+            <form th:action="@{/update/{id}(id=${memo.id()})}" th:method="post">
+                <label th:for="|edit-input-${memo.id()}|">내용 수정:</label>
+                <input type="text" th:name="text" th:id="|edit-input-${memo.id()}|" size="50" required>
+                <button type="submit">저장</button>
+                <button type="button" th:onclick="|hideEditForm(${memo.id()})|" class="cancel-button">취소</button>
+            </form>
+        </div>
+    </li>
+</ul>
+
+<p th:if="${memoList.isEmpty()}">표시할 메모가 없습니다.</p>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/ // Good practice for complex JS in Thymeleaf
+
+
+    // NEW function to handle the button click and read data attributes
+    function initiateEdit(buttonElement) {
+        const id = buttonElement.getAttribute('data-memo-id');
+        const currentText = buttonElement.getAttribute('data-memo-text');
+        // Now call the original function with the retrieved data
+        showEditForm(id, currentText);
+    }
+    function showEditForm(id, currentText) {
+        console.log("Editing memo ID:", id);
+        // Hide all other active edit forms first (good UX)
+        document.querySelectorAll('.memo-item .edit-form').forEach(form => {
+            if (form.style.display === 'block' && form.id !== 'edit-' + id) {
+                const otherId = form.id.split('-')[1];
+                hideEditForm(otherId); // Hide other forms if open
+            }
+        });
+
+        // Hide the display div for this memo
+        const displayDiv = document.getElementById('display-' + id);
+        if (displayDiv) displayDiv.style.display = 'none';
+
+        // Show the edit form for this memo
+        const editDiv = document.getElementById('edit-' + id);
+        if (editDiv) {
+            editDiv.style.display = 'block';
+            // Set the current text into the input field
+            const inputField = document.getElementById('edit-input-' + id);
+            if (inputField) {
+                inputField.value = currentText;
+                inputField.focus(); // Focus the input field
+                inputField.select(); // Select text for easy replacement
+            }
+        }
+    }
+
+    function hideEditForm(id) {
+        console.log("Canceling edit for memo ID:", id);
+        // Hide the edit form
+        const editDiv = document.getElementById('edit-' + id);
+        if (editDiv) editDiv.style.display = 'none';
+
+        // Show the display div
+        const displayDiv = document.getElementById('display-' + id);
+        if (displayDiv) displayDiv.style.display = 'block';
+    }
+
+    // Add confirmation prompts for delete actions using onsubmit in the HTML forms
+
+    /*]]>*/
+</script>
+
+</body>
+</html>
